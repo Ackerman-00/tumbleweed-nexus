@@ -54,10 +54,19 @@ tar -xzf "niri-$SHORT_COMMIT.tar.gz"
 cd "niri-$LATEST_COMMIT" || exit 1
 
 echo "⚙️  Vendoring cargo dependencies (This might take a minute)..."
-if ! cargo vendor > ../cargo_config; then
+if ! cargo vendor > ../cargo_config.tmp 2> /tmp/cargo-vendor.err; then
+    cat /tmp/cargo-vendor.err
     echo "❌ cargo vendor failed; OBS sources left untouched."
     exit 1
 fi
+# cargo 1.98 prints "Updating crates.io index" to stdout when cache is cold (corrupts config)
+# Ensure cargo_config is valid TOML starting with [source]
+if ! head -1 ../cargo_config.tmp | grep -q "^\[source"; then
+    sed -n '/^\[source/,$p' ../cargo_config.tmp > ../cargo_config
+else
+    mv ../cargo_config.tmp ../cargo_config
+fi
+rm -f ../cargo_config.tmp
 
 echo "🗜️  Compressing vendor tarball..."
 tar -cJf ../vendor.tar.xz vendor

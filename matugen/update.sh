@@ -60,10 +60,17 @@ cd "matugen-$NEW_VER" || exit 1
 
 # Generate vendor directory and config
 echo "⚙️  Vendoring cargo dependencies..."
-if ! cargo vendor > ../cargo_config; then
+if ! cargo vendor > ../cargo_config.tmp 2> /tmp/cargo-vendor.err; then
+    cat /tmp/cargo-vendor.err
     echo "❌ cargo vendor failed; spec left untouched."
     exit 1
 fi
+if ! head -1 ../cargo_config.tmp | grep -q "^\[source"; then
+    sed -n '/^\[source/,$p' ../cargo_config.tmp > ../cargo_config
+else
+    mv ../cargo_config.tmp ../cargo_config
+fi
+rm -f ../cargo_config.tmp
 
 # Compress the vendor directory
 echo "🗜️  Compressing vendor tarball..."
